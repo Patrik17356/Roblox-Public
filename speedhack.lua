@@ -1,14 +1,19 @@
---// Player & GUI
+--// Player & Services
 local player = game.Players.LocalPlayer
+local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+--// GUI
 local gui = Instance.new("ScreenGui")
 gui.Name = "SpeedGUI"
+gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
 --// Main Frame
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 250, 0, 150)
-frame.Position = UDim2.new(0.5, -125, 0.5, -75)
-frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+frame.Size = UDim2.new(0, 260, 0, 160)
+frame.Position = UDim2.new(0.5, -130, 0.5, -80)
+frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 frame.Active = true
 frame.Draggable = true
 frame.Parent = gui
@@ -17,29 +22,33 @@ frame.Parent = gui
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 30)
 title.Text = "Speed Controller"
-title.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+title.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 title.TextColor3 = Color3.new(1,1,1)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 14
 title.Parent = frame
 
---// Slider Background
+--// Slider BG
 local sliderBG = Instance.new("Frame")
-sliderBG.Size = UDim2.new(0.8, 0, 0, 10)
+sliderBG.Size = UDim2.new(0.8, 0, 0, 12)
 sliderBG.Position = UDim2.new(0.1, 0, 0.4, 0)
-sliderBG.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+sliderBG.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+sliderBG.BorderSizePixel = 0
 sliderBG.Parent = frame
 
 --// Slider Fill
 local sliderFill = Instance.new("Frame")
 sliderFill.Size = UDim2.new(0, 0, 1, 0)
 sliderFill.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+sliderFill.BorderSizePixel = 0
 sliderFill.Parent = sliderBG
 
---// Slider Button (draggable)
-local sliderBtn = Instance.new("TextButton")
-sliderBtn.Size = UDim2.new(0, 10, 0, 20)
-sliderBtn.Position = UDim2.new(0, -5, 0.5, -10)
-sliderBtn.Text = ""
-sliderBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+--// Slider Button
+local sliderBtn = Instance.new("Frame")
+sliderBtn.Size = UDim2.new(0, 14, 0, 14)
+sliderBtn.Position = UDim2.new(0, -7, 0.5, -7)
+sliderBtn.BackgroundColor3 = Color3.fromRGB(255,255,255)
+sliderBtn.BorderSizePixel = 0
 sliderBtn.Parent = sliderBG
 
 --// Speed Label
@@ -49,15 +58,19 @@ speedLabel.Position = UDim2.new(0, 0, 0.55, 0)
 speedLabel.Text = "Speed: 16"
 speedLabel.BackgroundTransparency = 1
 speedLabel.TextColor3 = Color3.new(1,1,1)
+speedLabel.Font = Enum.Font.Gotham
+speedLabel.TextSize = 14
 speedLabel.Parent = frame
 
 --// Toggle Button
 local button = Instance.new("TextButton")
-button.Size = UDim2.new(0.8, 0, 0, 30)
+button.Size = UDim2.new(0.8, 0, 0, 32)
 button.Position = UDim2.new(0.1, 0, 0.75, 0)
-button.Text = "Toggle Speed: OFF"
-button.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
+button.Text = "OFF"
+button.BackgroundColor3 = Color3.fromRGB(120, 0, 0)
 button.TextColor3 = Color3.new(1,1,1)
+button.Font = Enum.Font.GothamBold
+button.TextSize = 14
 button.Parent = frame
 
 --// Variables
@@ -66,42 +79,51 @@ local defaultSpeed = 16
 local currentSpeed = 16
 local dragging = false
 
---// Slider Logic
-local function updateSlider(x)
+--// Slider Function
+local function updateSliderFromX(x)
 	local rel = math.clamp((x - sliderBG.AbsolutePosition.X) / sliderBG.AbsoluteSize.X, 0, 1)
-	sliderFill.Size = UDim2.new(rel, 0, 1, 0)
-	sliderBtn.Position = UDim2.new(rel, -5, 0.5, -10)
 
-	currentSpeed = math.floor(1 + (99 * rel)) -- range 1–100
+	sliderFill.Size = UDim2.new(rel, 0, 1, 0)
+	sliderBtn.Position = UDim2.new(rel, -7, 0.5, -7)
+
+	currentSpeed = math.floor(1 + (99 * rel))
 	speedLabel.Text = "Speed: " .. currentSpeed
 end
 
-sliderBtn.MouseButton1Down:Connect(function()
-	dragging = true
+--// Input Handling (PC + Mobile)
+sliderBG.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1
+	or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		updateSliderFromX(input.Position.X)
+	end
 end)
 
-game:GetService("UserInputService").InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+UIS.InputChanged:Connect(function(input)
+	if dragging and (
+		input.UserInputType == Enum.UserInputType.MouseMovement
+		or input.UserInputType == Enum.UserInputType.Touch
+	) then
+		updateSliderFromX(input.Position.X)
+	end
+end)
+
+UIS.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1
+	or input.UserInputType == Enum.UserInputType.Touch then
 		dragging = false
 	end
 end)
 
-game:GetService("UserInputService").InputChanged:Connect(function(input)
-	if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-		updateSlider(input.Position.X)
-	end
-end)
-
---// Function to apply + hook humanoid
+--// Humanoid Setup
 local function setupHumanoid(character)
 	local humanoid = character:WaitForChild("Humanoid")
 
-	-- Instant apply
 	if toggled then
 		humanoid.WalkSpeed = currentSpeed
 	end
 
-	-- Hook (protect from resets)
+	-- Hook protection
 	humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
 		if toggled and humanoid.WalkSpeed ~= currentSpeed then
 			humanoid.WalkSpeed = currentSpeed
@@ -109,46 +131,40 @@ local function setupHumanoid(character)
 	end)
 end
 
---// Character respawn hook
-player.CharacterAdded:Connect(function(char)
-	setupHumanoid(char)
-end)
+--// Respawn Hook
+player.CharacterAdded:Connect(setupHumanoid)
 
--- Initial character
 if player.Character then
 	setupHumanoid(player.Character)
 end
 
---// Loop backup (extra safety)
-task.spawn(function()
-	while true do
-		if toggled then
-			local char = player.Character
-			if char then
-				local hum = char:FindFirstChild("Humanoid")
-				if hum then
-					hum.WalkSpeed = currentSpeed
-				end
+--// Frame-based enforcement
+RunService.RenderStepped:Connect(function()
+	if toggled then
+		local char = player.Character
+		if char then
+			local hum = char:FindFirstChild("Humanoid")
+			if hum and hum.WalkSpeed ~= currentSpeed then
+				hum.WalkSpeed = currentSpeed
 			end
 		end
-		task.wait(0.5)
 	end
 end)
 
---// Toggle button
+--// Toggle Button
 button.MouseButton1Click:Connect(function()
-	local character = player.Character or player.CharacterAdded:Wait()
-	local humanoid = character:WaitForChild("Humanoid")
+	local char = player.Character or player.CharacterAdded:Wait()
+	local hum = char:WaitForChild("Humanoid")
 
-	if not toggled then
-		toggled = true
-		humanoid.WalkSpeed = currentSpeed
-		button.Text = "Toggle Speed: ON"
-		button.BackgroundColor3 = Color3.fromRGB(0, 100, 0)
+	toggled = not toggled
+
+	if toggled then
+		hum.WalkSpeed = currentSpeed
+		button.Text = "ON"
+		button.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
 	else
-		toggled = false
-		humanoid.WalkSpeed = defaultSpeed
-		button.Text = "Toggle Speed: OFF"
-		button.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
+		hum.WalkSpeed = defaultSpeed
+		button.Text = "OFF"
+		button.BackgroundColor3 = Color3.fromRGB(120, 0, 0)
 	end
 end)
